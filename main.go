@@ -39,16 +39,16 @@ func main() {
 	log.Debug("Duration: %d", videoInfo.Duration)
 	log.Debug("DownloadInfo: %v", videoInfo.DownloadInfo)
 
-	for _, hd := range []string{"hd3", "hd2", "hd1", "normal"} {
+	for _, hd := range []string {"hd2", "hd1", "normal"} {
 		if dl, ok := videoInfo.DownloadInfo[hd]; ok {
 			filename := fmt.Sprintf("%s_%s_%s.mp4", videoInfo.Site, hd, videoInfo.Title)
 			header := http.Header{}
 			header.Add("user-agent", ua)
-			result, err := download.Download(filename, dl.(string), header)
+			err := download.Download(filename, dl.(string), header)
 			if err != nil {
 				log.Error("download %s video error: %s", hd, err.Error())
 			} else {
-				log.Debug("download %s video completed, location %s", hd, result)
+				log.Debug("download %s video successfully, location %s", hd, filename)
 				break
 			}
 		}

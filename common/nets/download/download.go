@@ -5,48 +5,44 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"pogo/common/logs"
 	"strconv"
 )
 
-var log = logs.Log
 
-func Download(filename, url string, header http.Header) (result string, err error) {
+// Download ... 下载网络文件到本地文件
+func Download(filename, url string, header http.Header) error {
 	file, err := os.Create(filename)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer file.Close()
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return "", err
+		return err
 	}
 	req.Header = header
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return err
 	}
 	contentLen, err := strconv.ParseInt(resp.Header["Content-Length"][0], 10, 64)
 	if err != nil {
-		return "", err
+		return err
 	}
+
 	io.Copy(file, resp.Body)
 	defer resp.Body.Close()
 
 	if fileInfo, err := os.Stat(filename); err == nil {
 		fileLength := fileInfo.Size()
 		if contentLen == fileLength {
-			result = filename
-		} else {
-			log.Debug("file size not equal %s,%d,%d ", filename, fileLength, contentLen)
-			return "", fmt.Errorf("download video error")
+			return nil
 		}
-
-	} else {
-		log.Debug("file %s not exists ", filename)
-		return "", err
+		return fmt.Errorf("file size not equal %s,%d,%d", filename, fileLength, contentLen)
 	}
-	return
+
+	return fmt.Errorf("file %s not exists", filename)
+
 }

@@ -89,14 +89,14 @@ func (xg *Xigua) GetVideoInfo() (*VideoInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-		downloadInfo["hd2"] = videoUrl
+		downloadInfo["hd1"] = videoUrl
 	}
 	if vjson, exists := videoListJson.CheckGet("video_3"); exists {
 		videoUrl, err := getVideoUrl(vjson)
 		if err != nil {
 			return nil, err
 		}
-		downloadInfo["hd1"] = videoUrl
+		downloadInfo["hd2"] = videoUrl
 	}
 
 	videoInfo.DownloadInfo = downloadInfo
