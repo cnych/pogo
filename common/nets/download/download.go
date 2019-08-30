@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"pogo/common/bar"
 	"strconv"
 )
 
@@ -32,8 +33,22 @@ func Download(filename, url string, header http.Header) error {
 		return err
 	}
 
-	io.Copy(file, resp.Body)
-	defer resp.Body.Close()
+	br := bar.NewBar(contentLen)
+	br.Resize = func(bar *bar.Bar) error {
+		fileInfo, err := os.Stat(filename)
+		if err == nil {
+			br.Size = fileInfo.Size()
+		}
+		return err
+	}
+	br.Start()
+
+	go func() {
+		io.Copy(file, resp.Body)
+		defer resp.Body.Close()
+	}()
+
+	br.ShowProgress()
 
 	if fileInfo, err := os.Stat(filename); err == nil {
 		fileLength := fileInfo.Size()

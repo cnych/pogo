@@ -37,7 +37,7 @@ func main() {
 	log.Debug("Url: %s", videoInfo.Url)
 	log.Debug("Site: %s", videoInfo.Site)
 	log.Debug("Duration: %d", videoInfo.Duration)
-	log.Debug("DownloadInfo: %v", videoInfo.DownloadInfo)
+	//log.Debug("DownloadInfo: %v", videoInfo.DownloadInfo)
 
 	for _, hd := range []string {"hd2", "hd1", "normal"} {
 		if dl, ok := videoInfo.DownloadInfo[hd]; ok {
