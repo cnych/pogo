@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/cnych/stardust/encodingx/base64x"
-	"io/ioutil"
-	"net/http"
+	"pogo/common/call"
 	"pogo/common/logs"
+	"pogo/common/nets/fetch"
 	"regexp"
 )
 
@@ -26,28 +26,21 @@ type Xigua struct {
 
 
 func (xg *Xigua) GetVideoInfo() (*VideoInfo, error) {
-	req, err := http.NewRequest(http.MethodGet, xg.Url, nil)
+	header := map[string]string{
+		"user-agent": ua,
+		"referer": "https://www.ixigua.com/",
+	}
+	req := fetch.DefaultRequest(xg.Url, header)
+
+	resp, err := fetch.Fetch(req)
 	if err != nil {
 		return nil, err
 	}
 
-	header := http.Header{}
-	header.Add("user-agent", ua)
-	header.Add("referer", "https://www.ixigua.com/")
-	req.Header = header
-
-	resp, err := http.DefaultClient.Do(req)
+	html, err := resp.AsText("UTF-8")
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	resultBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	//log.Debug(string(resultBytes))
-	html := string(resultBytes)
 
 	//"title":"乔恩为了让加菲猫干活，竟然让博士对他催眠，这就有点狠了！","tag"
 	title := MathRegexpOf1(`"user_bury":0,"title":"(.*)","tag"`, html)
@@ -67,7 +60,11 @@ func (xg *Xigua) GetVideoInfo() (*VideoInfo, error) {
 	xg.authToken = MathRegexpOf1(`"authToken":"(.*)","is_original"`, html)
 
 	//log.Debug("vid=%s, pToken=%s, authToken=%s", vid, pToken, authToken)
-	videoJson, err := parseVideoUrl(xg)
+	var videoJson *simplejson.Json
+	_ = call.Retry(req.Retries, func() error {
+		videoJson, err = parseVideoUrl(xg)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -125,28 +122,26 @@ func parseVideoUrl(xg *Xigua) (*simplejson.Json, error) {
 		"&nobase64=false&ptoken=%s&" +
 		"vfrom=xgplayer", aid, xg.vid, xg.businessToken)
 
-	req, err := http.NewRequest(http.MethodGet, apiUrl, nil)
+	header := map[string]string{
+		"user-agent": ua,
+		"referer": xg.Url,
+		"Authorization": xg.authToken,
+	}
+	req := fetch.DefaultRequest(apiUrl, header)
+
+	resp, err := fetch.Fetch(req)
 	if err != nil {
 		return nil, err
 	}
 
-	header := http.Header{}
-	header.Add("user-agent", ua)
-	header.Add("referer", xg.Url)
-	header.Add("Authorization", xg.authToken)
-	req.Header = header
+	resultJSON, err := resp.ParseSimpleJSON()
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	resultBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+	code := resultJSON.Get("code").MustInt()
+	if code != 0 {
+		return nil, fmt.Errorf(resultJSON.Get("message").MustString())
 	}
 
-	return simplejson.NewJson(resultBytes)
+	return resultJSON, err
 }
 
 func MatchRegexp(pattern, content string, index int) string {

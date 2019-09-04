@@ -1,106 +1,68 @@
 package fetch
 
 import (
-	"fmt"
-	"github.com/cnych/stardust/timex"
-	"io"
-	"io/ioutil"
+	"github.com/bitly/go-simplejson"
+	"github.com/cnych/stardust/unicodex"
 	"net/http"
-	"strings"
-	"time"
 )
 
-func Fetch(req *Request) (*Response, error) {
-	if req == nil {
-		return nil, fmt.Errorf("request is nil")
-	}
-	if req.URL == "" {
-		return nil, fmt.Errorf("request url is empty")
-	}
-
-	if req.Retries > 0 {
-		var resp *Response
-		var err error
-
-		_ = Retry(req.Retries, func() error {
-			resp, err = fetchOne(req)
-			return err
-		})
-
-		return resp, err
-	}
-
-	return fetchOne(req)
-
+type Request struct {
+	Method string `json:"method"`
+	URL string `json:"url"`
+	Header map[string]string `json:"header"`
+	Body string `json:"body,omitempty"`
+	Retries int `json:"retries,omitempty"`
+	Timeout int64 `json:"timeout,omitempty"`
 }
 
-func fetchOne(req *Request) (*Response, error) {
-	if req.Method == "" {
-		req.Method = http.MethodGet
+func NewGetRequest(url string, retries int, timeout int64, header map[string]string) *Request {
+	return &Request{
+		URL: url,
+		Method: http.MethodGet,
+		Header: header,
+		Retries: retries,
+		Timeout: timeout,
 	}
-
-	var body io.Reader
-	if req.Body != "" {
-		body = strings.NewReader(req.Body)
-	}
-
-	newReq, err := http.NewRequest(req.Method, req.URL, body)
-	if err != nil {
-		return nil, err
-	}
-
-	// header
-	header := http.Header{}
-	for k, v := range req.Header {
-		header.Add(k, v)
-	}
-	newReq.Header = header
-
-	var timeout time.Duration
-	if req.Timeout > 0 {
-		timeout = timex.DurationMS(req.Timeout)
-	}
-	client := http.Client{Timeout: timeout}
-
-	newResp, err := client.Do(newReq)
-	if err != nil {
-		return nil, err
-	}
-	defer newResp.Body.Close()
-
-	resp := Response{}
-	resp.StatusCode = newResp.StatusCode
-	resp.URL = req.URL
-	if len(newResp.Header) >0 {
-		resp.Header = map[string]string{}
-	}
-	for k, vl := range newResp.Header {
-		resp.Header[k] = vl[0]
-	}
-
-	respBody, err := ioutil.ReadAll(newResp.Body)
-	if err != nil {
-		return nil, err
-	}
-	resp.SetBody(respBody)
-
-	return &resp, nil
 }
 
+// DefaultRequest ... 定义的一个默认的Request对象
+func DefaultRequest(url string, header map[string]string) *Request {
+	return NewGetRequest(url, 3, 3000, header)
+}
 
-func Retry(retries int, f func() error) error {
-	err := f()
-	if err == nil {
-		return nil
+type Response struct {
+	StatusCode int `json:"status_code"`
+	URL string `json:"url"`
+	Header map[string]string `json:"header"`
+	Body string `json:"body,omitempty"`
+}
+
+func (resp *Response) AsBytes() ([]byte, error) {
+	if resp.Body == "" {
+		return nil, nil
 	}
-	if retries <=0 {
-		return err
+	return []byte(resp.Body), nil
+}
+
+func (resp *Response) AsText(charset string) (string, error) {
+	buff, err := resp.AsBytes()
+	if err != nil {
+		return "", err
 	}
-	for i := 0; i< retries ; i++ {
-		err = f()
-		if err == nil {
-			return nil
-		}
+	return unicodex.Decode(buff, charset)
+}
+
+func (resp *Response) ParseSimpleJSON() (*simplejson.Json, error) {
+	bodyBytes, err := resp.AsBytes()
+	if err != nil {
+		return nil, err
 	}
-	return err
+	return simplejson.NewJson(bodyBytes)
+}
+
+func (resp *Response) SetBody(data []byte) {
+	if len(data) == 0 {
+		return
+	}
+	resp.Body = string(data)
 }
