@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	browser "github.com/EDDYCJY/fake-useragent"
 	"github.com/bitly/go-simplejson"
 	"github.com/cnych/stardust/encodingx/base64x"
 	"pogo/common/call"
@@ -14,7 +15,6 @@ var log = logs.Log
 
 const (
 	aid = 1768
-	ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36"
 )
 
 type Xigua struct {
@@ -25,9 +25,17 @@ type Xigua struct {
 }
 
 
-func (xg *Xigua) GetVideoInfo() (*VideoInfo, error) {
+func (xg *Xigua) GetVideoInfo() (info *VideoInfo, err error) {
+	_ = call.Retry(3, func() error {
+		info, err = getVideoInfoOnce(xg)
+		return err
+	})
+	return
+}
+
+func getVideoInfoOnce(xg *Xigua) (*VideoInfo, error) {
 	header := map[string]string{
-		"user-agent": ua,
+		"user-agent": browser.Computer(),
 		"referer": "https://www.ixigua.com/",
 	}
 	req := fetch.DefaultRequest(xg.Url, header)
@@ -59,12 +67,7 @@ func (xg *Xigua) GetVideoInfo() (*VideoInfo, error) {
 	//"authToken":"HMAC-SHA1:2.0:1565422913273604497:cfc067bb39feff592af82085b42e6dc3:RuTnxlMBKOtk8z4p0J\u002F3aWuc27o=","is_original"
 	xg.authToken = MathRegexpOf1(`"authToken":"(.*)","is_original"`, html)
 
-	//log.Debug("vid=%s, pToken=%s, authToken=%s", vid, pToken, authToken)
-	var videoJson *simplejson.Json
-	_ = call.Retry(req.Retries, func() error {
-		videoJson, err = parseVideoUrl(xg)
-		return err
-	})
+	videoJson, err := parseVideoUrl(xg)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +102,6 @@ func (xg *Xigua) GetVideoInfo() (*VideoInfo, error) {
 	videoInfo.DownloadInfo = downloadInfo
 
 	return &videoInfo, nil
-
 }
 
 func getVideoUrl(vjson *simplejson.Json) (string, error) {
@@ -123,7 +125,7 @@ func parseVideoUrl(xg *Xigua) (*simplejson.Json, error) {
 		"vfrom=xgplayer", aid, xg.vid, xg.businessToken)
 
 	header := map[string]string{
-		"user-agent": ua,
+		"user-agent": browser.Computer(),
 		"referer": xg.Url,
 		"Authorization": xg.authToken,
 	}
@@ -135,6 +137,8 @@ func parseVideoUrl(xg *Xigua) (*simplejson.Json, error) {
 	}
 
 	resultJSON, err := resp.ParseSimpleJSON()
+
+	//log.Debug("%v", resultJSON)
 
 	code := resultJSON.Get("code").MustInt()
 	if code != 0 {

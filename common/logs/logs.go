@@ -2,11 +2,9 @@ package logs
 
 import (
 	"fmt"
+	"io"
 	"pogo/common/config"
 	"pogo/common/logs/logs"
-	"io"
-	"os"
-	"path"
 )
 
 type Logs interface {
@@ -50,15 +48,14 @@ func (log *pgLog) SetOutput(show io.Writer) Logs {
 }
 
 var Log = func() Logs {
-	p, _ := path.Split(config.LogPath)
-	// 不存在目录时创建目录
-	d, err := os.Stat(p)
-	if err != nil || !d.IsDir() {
-		if err := os.MkdirAll(p, 0777); err != nil {
-			// Log.Error("Error: %v\n", err)
-		}
-	}
-
+	//p, _ := path.Split(config.LogPath)
+	//// 不存在目录时创建目录
+	//d, err := os.Stat(p)
+	//if err != nil || !d.IsDir() {
+	//	if err := os.MkdirAll(p, 0777); err != nil {
+	//		// Log.Error("Error: %v\n", err)
+	//	}
+	//}
 	pglog := &pgLog{
 		BeeLogger: logs.NewLogger(config.LogCap, config.LogFeedbackLevel),
 	}
@@ -76,7 +73,7 @@ var Log = func() Logs {
 
 	// 是否保存所有日志到本地文件
 	if config.LogSave {
-		err = pglog.BeeLogger.SetLogger("file", map[string]interface{}{
+		err := pglog.BeeLogger.SetLogger("file", map[string]interface{}{
 			"filename": config.LogPath,
 		})
 		if err != nil {

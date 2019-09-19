@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	browser "github.com/EDDYCJY/fake-useragent"
 	"net/http"
 	"pogo/common/logs"
 	"pogo/common/nets/download"
@@ -11,7 +12,6 @@ import (
 
 var (
 	log = logs.Log
-	ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36"
 )
 
 func init() {
@@ -24,7 +24,6 @@ func main() {
 		return
 	}
 	url := flag.Arg(0)
-	log.Debug(url)
 
 	xg := parser.Xigua{Url: url}
 	videoInfo, err := xg.GetVideoInfo()
@@ -33,22 +32,20 @@ func main() {
 		return
 	}
 
-	log.Debug("Title: %s", videoInfo.Title)
-	log.Debug("Url: %s", videoInfo.Url)
-	log.Debug("Site: %s", videoInfo.Site)
-	log.Debug("Duration: %d", videoInfo.Duration)
-	//log.Debug("DownloadInfo: %v", videoInfo.DownloadInfo)
+	fmt.Printf("Title:			%s\n", videoInfo.Title)
+	fmt.Printf("Site:			%s\n", videoInfo.Site)
+	fmt.Printf("Url:			%s\n", videoInfo.Url)
+	fmt.Printf("Duration:		%ds\n", videoInfo.Duration)
 
 	for _, hd := range []string {"hd2", "hd1", "normal"} {
 		if dl, ok := videoInfo.DownloadInfo[hd]; ok {
 			filename := fmt.Sprintf("%s_%s_%s.mp4", videoInfo.Site, hd, videoInfo.Title)
 			header := http.Header{}
-			header.Add("user-agent", ua)
+			header.Add("user-agent", browser.Computer())
 			err := download.Download(filename, dl.(string), header)
 			if err != nil {
 				log.Error("download %s video error: %s", hd, err.Error())
 			} else {
-				log.Debug("download %s video successfully, location %s", hd, filename)
 				break
 			}
 		}
