@@ -1,5 +1,7 @@
 package parser
 
+import "pogo/common/strs"
+
 type VideoInfo struct {
 	Site string `json:"site"`
 	Title string `json:"title"`
@@ -17,7 +19,7 @@ type BaseVideo struct {
 func (base *BaseVideo) MatchUrl(url string) bool {
 	//	https://www.ixigua.com/i6688067268607214088/
 	for _, pattern := range base.VideoPatterns {
-		if rcontent := MatchRegexpOf1(pattern, url); len(rcontent) > 0 {
+		if rcontent := strs.MatchRegexpOf1(pattern, url); len(rcontent) > 0 {
 			base.Url = url
 			return true
 		}

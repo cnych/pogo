@@ -5,6 +5,7 @@ import (
 	"pogo/common/call"
 	"pogo/common/convert"
 	"pogo/common/nets/fetch"
+	"pogo/common/strs"
 )
 
 type Douyin struct {
@@ -29,7 +30,7 @@ func (dy *Douyin) GetVideoInfo() (info *VideoInfo, err error)  {
 }
 
 func getDouyinOnce(dy *Douyin) (info *VideoInfo, err error) {
-	header := map[string]string{
+	header := map[string]string {
 		"user-agent": browser.Mobile(),
 	}
 	req := fetch.DefaultRequest(dy.Url, header)
@@ -44,15 +45,15 @@ func getDouyinOnce(dy *Douyin) (info *VideoInfo, err error) {
 		return nil, err
 	}
 
-	//<div class="user-title">满院果蔬熟透，豇豆长势尤其猛，来做些干豇豆吧 </div>
-	title := MatchRegexpOf1(`<div class="user-title">(.*)</div><div class="user-avator"`, html)
-
-	//" preload="auto" type="video/mp4" width="100%" webkit-playsinline="true" playsinline="true" x5-video-player-type="h5" x5-video-player-fullscreen="portraint" onerror="window.VIDEO_FAILED=1"></video>
-	videoUrl := MatchRegexpOf1(`<video id="theVideo" class="video-player" src="(.*)" preload="auto"`, html)
+	//<div class="user-title">满院果蔬熟透，豇豆长势尤其猛，来做些干豇豆吧 </div><div class="user-avator"
+	title := strs.MatchRegexpOf1(`<div class="user-title">(.*)</div><div class="user-avator"`, html)
+	//<video id="theVideo" class="video-player" src="xxxxx" preload="auto"
+	videoUrl := strs.MatchRegexpOf1(`class="video-player" src="(.*)" preload="auto"`, html)
 
 	downloadInfo := make(map[string]interface{})
 	downloadInfo["normal"] = videoUrl
 
+	// 获取 Duration
 	duration, err := convert.NewFFMpeg().Duration(videoUrl)
 	if err != nil {
 		duration = 0

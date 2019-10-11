@@ -25,10 +25,7 @@ func main() {
 	}
 	url := flag.Arg(0)
 
-	key, spider := parser.GetParser(url)
-	fmt.Println(key)
-	//xg := parser.Xigua{Url: url}
-	//videoInfo, err := xg.GetVideoInfo()
+	_, spider := parser.GetParser(url)
 	videoInfo, err := spider.GetVideoInfo()
 	if err != nil {
 		log.Error(err.Error())

@@ -8,7 +8,7 @@ import (
 	"pogo/common/call"
 	"pogo/common/logs"
 	"pogo/common/nets/fetch"
-	"regexp"
+	"pogo/common/strs"
 )
 
 var log = logs.Log
@@ -33,13 +33,13 @@ func XiguaRegister()  {
 
 func (xg *Xigua) GetVideoInfo() (info *VideoInfo, err error) {
 	_ = call.Retry(3, func() error {
-		info, err = getVideoInfoOnce(xg)
+		info, err = getXiguaOnce(xg)
 		return err
 	})
 	return
 }
 
-func getVideoInfoOnce(xg *Xigua) (*VideoInfo, error) {
+func getXiguaOnce(xg *Xigua) (*VideoInfo, error) {
 	header := map[string]string{
 		"user-agent": browser.Computer(),
 		"referer": "https://www.ixigua.com/",
@@ -57,7 +57,7 @@ func getVideoInfoOnce(xg *Xigua) (*VideoInfo, error) {
 	}
 
 	//"title":"乔恩为了让加菲猫干活，竟然让博士对他催眠，这就有点狠了！","tag"
-	title := MatchRegexpOf1(`"user_bury":0,"title":"(.*)","tag"`, html)
+	title := strs.MatchRegexpOf1(`"user_bury":0,"title":"(.*)","tag"`, html)
 
 	videoInfo := VideoInfo{}
 	videoInfo.Title = title
@@ -65,13 +65,13 @@ func getVideoInfoOnce(xg *Xigua) (*VideoInfo, error) {
 	videoInfo.Site = "西瓜视频"
 
 	//"vid":"v02004910000bj377nc1n3e63t2qmc00",
-	xg.vid = MatchRegexpOf1(`"vid":"(.*)","user_digg"`, html)
+	xg.vid = strs.MatchRegexpOf1(`"vid":"(.*)","user_digg"`, html)
 
 	//"businessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NjU0MjI5MTMsInZlciI6InYxIiwiYWsiOiJjZmMwNjdiYjM5ZmVmZjU5MmFmODIwODViNDJlNmRjMyIsInN1YiI6InBnY19ub3JtYWwifQ.aaUsIAdV5yqVRZtv4A9G9ijV_GGP261ww-2gK2Asyt0","authToken"
-	xg.businessToken = MatchRegexpOf1(`"businessToken":"(.*)","authToken"`, html)
+	xg.businessToken = strs.MatchRegexpOf1(`"businessToken":"(.*)","authToken"`, html)
 
 	//"authToken":"HMAC-SHA1:2.0:1565422913273604497:cfc067bb39feff592af82085b42e6dc3:RuTnxlMBKOtk8z4p0J\u002F3aWuc27o=","is_original"
-	xg.authToken = MatchRegexpOf1(`"authToken":"(.*)","is_original"`, html)
+	xg.authToken = strs.MatchRegexpOf1(`"authToken":"(.*)","is_original"`, html)
 
 	videoJson, err := parseVideoUrl(xg)
 	if err != nil {
@@ -152,19 +152,4 @@ func parseVideoUrl(xg *Xigua) (*simplejson.Json, error) {
 	}
 
 	return resultJSON, err
-}
-
-func MatchRegexp(pattern, content string, index int) string {
-	compile := regexp.MustCompile(pattern)
-	matches := compile.FindStringSubmatch(content)
-	for i, v := range matches {
-		if i == index {
-			return v
-		}
-	}
-	return ""
-}
-
-func MatchRegexpOf1(pattern, content string) string {
-	return MatchRegexp(pattern, content, 1)
 }
