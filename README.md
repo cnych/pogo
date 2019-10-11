@@ -17,8 +17,8 @@ $ pogo http://v.douyin.com/u2f91P/
 ## 支持平台
 - [x] 西瓜视频
 - [x] 抖音短视频
-- [] 优酷视频
-- [] 腾讯视频
-- [] 爱奇艺
-- [] BiliBili
-- [] Youtube
+- [ ] 优酷视频
+- [ ] 腾讯视频
+- [ ] 爱奇艺
+- [ ] BiliBili
+- [ ] Youtube
